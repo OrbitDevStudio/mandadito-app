@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0F2236">
+  <title>Mandadito · Delivery en Valencia</title>
+  <meta name="description" content="Mandados y encomiendas en Valencia, Carabobo.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Mapa a pantalla completa (detrás de todo) -->
+  <div id="map" aria-label="Mapa de Valencia, Carabobo"></div>
+
+  <!-- Barra superior fija: marca + selector de rol (solo pruebas; Paso 3 lo reemplaza por Auth) -->
+  <header class="topbar">
+    <h1 class="brand">
+      <svg class="logo" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="#0F2236"/>
+        <path d="M16 6a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="#FFC21A"/>
+        <circle cx="16" cy="13" r="2.8" fill="#0F2236"/>
+      </svg>
+      Mandadito
+    </h1>
+    <div class="roles" role="tablist" aria-label="Rol de prueba">
+      <button class="role is-active" role="tab" data-role="cliente"   aria-selected="true">Cliente</button>
+      <button class="role"           role="tab" data-role="motorizado" aria-selected="false">Motorizado</button>
+      <button class="role"           role="tab" data-role="admin"      aria-selected="false">Admin</button>
+    </div>
+  </header>
+
+  <!-- Aviso emergente (errores y confirmaciones) -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Contenedor inferior: botón GPS flotante + bottom sheet -->
+  <div class="dock" id="dock">
+
+    <!-- Botón flotante "Mi ubicación" (mira de GPS) -->
+    <button class="fab" id="btn-gps" aria-label="Mi ubicación" title="Mi ubicación">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8"/>
+        <path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
+      </svg>
+    </button>
+
+    <section class="sheet" id="sheet">
+      <button class="handle" id="handle" aria-label="Mostrar u ocultar panel"><span></span></button>
+
+      <!-- CLIENTE -->
+      <div class="panel" id="panel-cliente">
+
+        <!-- Si ya hay GPS, ofrece usarlo con un toque -->
+        <div class="gps-actions" id="gps-actions" hidden>
+          <span>Tu ubicación</span>
+          <button class="chip chip-a" data-usar="A">Usar como recogida</button>
+          <button class="chip chip-b" data-usar="B">Usar como entrega</button>
+        </div>
+
+        <!-- Los dos puntos: tocar uno lo selecciona para el siguiente toque en el mapa -->
+        <div class="points">
+          <button class="point is-target" id="row-A" data-tipo="A">
+            <i class="mini mini-a">A</i>
+            <span><small>Recogida</small><b id="txt-origen">Toca el mapa para marcar</b></span>
+          </button>
+          <button class="point" id="row-B" data-tipo="B">
+            <i class="mini mini-b">B</i>
+            <span><small>Entrega</small><b id="txt-destino">Toca el mapa para marcar</b></span>
+          </button>
+        </div>
+
+        <label class="field">
+          <span>¿Qué necesitas?</span>
+          <textarea id="pedido-detalle" rows="2" placeholder="Ej: Comprar 2 harinas y llevarlas a mi casa"></textarea>
+        </label>
+
+        <p class="aviso" id="aviso" hidden></p>
+
+        <div class="price-row">
+          <div>
+            <span class="muted">Tarifa estimada</span>
+            <span class="trip" id="trip">Marca recogida y entrega</span>
+          </div>
+          <strong id="precio" class="price">$0.00</strong>
+        </div>
+
+        <button class="btn btn-primary" id="btn-solicitar" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          Solicitar mandadito
+        </button>
+      </div>
+
+      <!-- MOTORIZADO -->
+      <div class="panel" id="panel-motorizado" hidden>
+        <div class="wallet">
+          <div><span class="muted">Saldo disponible</span><strong class="wallet-amount" id="saldo">$3.00</strong></div>
+          <button class="btn btn-ghost" id="btn-recargar">Recargar</button>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="chk-disponible">
+          <span class="track"></span>
+          <span id="txt-disponible">No disponible</span>
+        </label>
+        <p class="small muted">Cada mandadito aceptado descuenta $0.40 de tu saldo.</p>
+        <div class="empty">Sin pedidos por ahora. Activa «Disponible» para recibir alertas.</div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="panel" id="panel-admin" hidden>
+        <div class="stats">
+          <div><strong id="adm-activos">0</strong><span>Pedidos activos</span></div>
+          <div><strong id="adm-riders">0</strong><span>Motorizados</span></div>
+          <div><strong id="adm-recargas">0</strong><span>Recargas pendientes</span></div>
+        </div>
+        <div class="empty">Aquí aprobarás las recargas de Pago Móvil (Paso 3).</div>
+      </div>
+    </section>
+  </div>
+
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script defer src="app.js"></script>
+</body>
+</html>
